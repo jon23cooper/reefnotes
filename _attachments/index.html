@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html ng-app>
+  <head>
+  <meta charset="UTF-8">
+  <title>Reef Notes</title>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.2/angular.min.js"></script> 
+  <script type="text/javascript">
+   function FetchParameters($scope, $http, $log) {
+     // path to Design Document 'parameters' view 'all_names'
+     $scope.url = 'http://localhost:5984/reefnotes/_design/parameters/_view/all_names';
+     // get results from all_names view and store in variable
+     $scope.show= function(){
+       $http.get($scope.url).success(function(myparameters){
+         $scope.parameter_rows=myparameters.rows;
+         $log.info(myparameters.rows);
+       });
+     }
+     $scope.save=function(){
+         var parameter_doc={
+             type:'parameter',
+             name:'',
+         };
+         $scope.mypromise=$http.get('http://localhost:5984/_uuids').success(function(myuuid){
+             parameter_doc.name=$scope.name;
+             parameter_doc_url="http://localhost:5984/reefnotes/" + myuuid.uuids[0];
+             $http.put(parameter_doc_url, parameter_doc).success(function(data, status){
+                 //do something
+                 $scope.data=data;
+                 $scope.status=status;
+                 $scope.show();
+             });
+         });
+        
+     }
+     //call the function to get the view results
+     $scope.show();
+   } 
+  
+  </script> 
+  </head>
+  <body>
+  <h1>Reef Notes</h1>
+  <h2>Parameters:</h2>
+  <div ng-controller="FetchParameters">
+    <p ng-repeat="myrow in parameter_rows">
+      {{myrow.key}}
+    </p>
+  <!-- </div> ->
+  <!-- <div ng-controller='FetchParameters'> -->
+      <form name="AddNewParameter">
+        <label>Name:</label>
+        <input type="text" ng-model="name">
+        <button ng-click="save()">Save</button>
+      </form>
+      <p>{{url}}</p>
+      <p>{{mypromise}}</p>    
+      <p>{{uuid}}</p>
+      <p>{{name}}</p>
+      <p>{{data}}</p>
+      <p>{{status}}</p>
+  </div>     
+  </body>
+</html>
