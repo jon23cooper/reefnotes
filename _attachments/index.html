@@ -14,27 +14,69 @@
          $scope.parameter_rows=myparameters.rows;
          $log.info(myparameters.rows);
        });
-     }
-     $scope.save=function(){
-         var parameter_doc={
-             type:'parameter',
-             name:'',
-         };
-         $scope.mypromise=$http.get('http://localhost:5984/_uuids').success(function(myuuid){
-             parameter_doc.name=$scope.name;
-             parameter_doc_url="http://localhost:5984/reefnotes/" + myuuid.uuids[0];
-             $http.put(parameter_doc_url, parameter_doc).success(function(data, status){
-                 //do something
-                 $scope.data=data;
-                 $scope.status=status;
-                 $scope.show();
-             });
-         });
-        
-     }
+     };
      //call the function to get the view results
      $scope.show();
+     //save form data as new document of type: parameter
+     $scope.save=function(){
+         //create a json object to hold the new parameter document data
+         //must be of type parameter so set that.
+         //name is supplied by the name text input on the form
+         var parameter_doc={
+             type:'parameter',
+             name:$scope.name,
+         };
+         //post the data to CouchDB
+         $http.post("http://localhost:5984/reefnotes", parameter_doc).success(function(data, status, headers, config){
+             // tell the user we've saved the data
+             $scope.message="Parameter " + $scope.name + " added";
+             $scope.show();
+             $scope.name="";
+         });         
+     };
+     //delete documents from CouchDB
+     $scope.delete=function(){
+         //check something has been selected and so there is something to delete
+         //$scope.selected_parameter will hold the id(_id), key(name) and value(_rev) of the document selecte din the dropdown
+         if ($scope.selected_parameter){
+             //delete selected parameter
+             $http.delete("http://localhost:5984/reefnotes/" + $scope.selected_parameter.id + "?rev=" + $scope.selected_parameter.value).success(function(data, status, headers, config){
+                 //tell the user what we've done
+                 $scope.message="Parameter " + $scope.selected_parameter.key + " deleted."
+                 
+                 //update the list
+                 $scope.show();
+             });
+         };
+     };
+     //update documents in CouchDB
+     $scope.update=function(){
+         //update requires all fields to be provided
+         $scope.parameter_doc={
+             _rev:$scope.selected_parameter.value,
+             type:"parameter",
+             name:$scope.selected_parameter.key,            
+         };
+         //check we have a parameter to change
+         if ($scope.selected_parameter.name){
+             //PUT the amended parameter to the database
+             $http.put("http://localhost:5984/reefnotes/" + $scope.selected_parameter.id, $scope.parameter_doc).success(function(data,status, headers, config){
+                 //successful, so tell user we made changes
+                 $scope.message="Parameter " + $scope.selected_parameter.key + " updated";
+                 //clear input textbox
+                 $scope.selected_parameter.key="";
+                 //update list of elements
+                 $scope.show();
+             }).error(function(data, status, headers, config){
+                 //failed so log it and inform user
+                 $log.info(data);
+                 $log.info($scope.parameter_doc);
+                 $scope.message=data;
+             });
+         };
+     };
    } 
+
   
   </script> 
   </head>
@@ -42,22 +84,24 @@
   <h1>Reef Notes</h1>
   <h2>Parameters:</h2>
   <div ng-controller="FetchParameters">
-    <p ng-repeat="myrow in parameter_rows">
-      {{myrow.key}}
-    </p>
-  <!-- </div> ->
-  <!-- <div ng-controller='FetchParameters'> -->
-      <form name="AddNewParameter">
-        <label>Name:</label>
-        <input type="text" ng-model="name">
-        <button ng-click="save()">Save</button>
-      </form>
-      <p>{{url}}</p>
-      <p>{{mypromise}}</p>    
-      <p>{{uuid}}</p>
-      <p>{{name}}</p>
-      <p>{{data}}</p>
-      <p>{{status}}</p>
+      <div class="parameter" ng-repeat="myrow in parameter_rows">
+          {{myrow.key}}
+      </div>
+    <form name="AddNewParameter">
+    <label>Name:</label>
+    <input type="text" ng-model="name">
+    <button ng-click="save()">Save</button>
+    </form>
+    <p>{{message}}</p> 
+    <form name="UpdateDeleteParameter" >
+        <label>Select Parameter:</label>
+        <select ng-model="selected_parameter" ng-options="myrow.key for myrow in parameter_rows">
+        </select></br>
+        <input type="text" ng-model="selected_parameter.key"><br/>
+        <button ng-click="update()">Update</button>
+        <button ng-click="delete()">Delete</button>
+    </form> 
+    {{selected_parameter}}
   </div>     
   </body>
 </html>
